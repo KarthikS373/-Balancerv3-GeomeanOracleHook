@@ -1,301 +1,53 @@
-# 🏗︎ Scaffold Balancer v3
+# GeomeanOracleHook
 
-A starter kit for building on top of Balancer v3. Accelerate the process of creating custom pools and hooks contracts. Concentrate on mastering the core concepts within a swift and responsive environment augmented by a local fork and a frontend pool operations playground.
+### Introduction
 
-[![intro-to-scaffold-balancer](https://github.com/user-attachments/assets/f862091d-2fe9-4b4b-8d70-cb2fdc667384)](https://www.youtube.com/watch?v=m6q5M34ZdXw)
+The GeomeanOracleHook is a custom hook designed for BalancerV3 pools, transforming them into robust Geometric mean oracles. By tracking and analyzing price observations, this hook provides reliable geometric mean price data, which is essential for various DeFi applications such as stablecoin mechanisms, automated market makers and DeFi protocols that require accurate price feeds
 
-### 🔁 Development Life Cycle
+## Problem statement
 
-1. Learn the core concepts for building on top of Balancer v3
-2. Configure and deploy factories, pools, and hooks contracts to a local anvil fork of Sepolia
-3. Interact with pools via a frontend that runs at [localhost:3000](http://localhost:3000/)
+In DeFi, accurate and reliable price oracles are crucial for maintaining the integrity and functionality of various protocols. Traditional arithmetic mean or single point price oracles can be susceptible to manipulation, volatility and inaccuracies due to limited data points. There's a need for a more resilient approach to price aggregation that can provide a stable and reliable metric for asset prices over time
 
-### 🪧 Table Of Contents
+### Architecture
 
-- [🧑‍💻 Environment Setup](#-environment-setup)
-- [👩‍🏫 Learn Core Concepts](#-learn-core-concepts)
-- [🕵️ Explore the Examples](#-explore-the-examples)
-- [🌊 Create a Custom Pool](#-create-a-custom-pool)
-- [🏭 Create a Pool Factory](#-create-a-pool-factory)
-- [🪝 Create a Pool Hook](#-create-a-pool-hook)
-- [🚢 Deploy the Contracts](#-deploy-the-contracts)
-- [🧪 Test the Contracts](#-test-the-contracts)
+- Components
 
-## 🧑‍💻 Environment Setup
+  - GeomeanOracleHook contract: Implements the `IHooks` interface and extends `BaseHooks` and `VaultGuard` from BalancerV3. It manages the registration of pools, records price observations and computes the geometric mean of collected prices
 
-### 1. Requirements 📜
+  - GeomeanLibrary: A Solidity library that provides functions to compute the geometric mean of an array of values, including utility functions for safe arithmetic operations
 
-- [Node (>= v18.17)](https://nodejs.org/en/download/)
-- Yarn ([v1](https://classic.yarnpkg.com/en/docs/install/) or [v2+](https://yarnpkg.com/getting-started/install))
-- [Git](https://git-scm.com/downloads)
-- [Foundry](https://book.getfoundry.sh/getting-started/installation) (>= v0.2.0)
+### Workflow
 
-### 2. Quickstart 🏃
+- Pool registration: When a new pool is created via the allowed factory, the onRegister function is called. This ensures that only pools from the authorized factory can use the GeomeanOracleHook
 
-1. Ensure you have the latest version of foundry installed
+- Price observation: Every time a swap occurs in the pool (onAfterSwap), the hook calculates the current price based on the swap parameters and records this observation
 
-```
-foundryup
-```
+- Geometric mean calculation: Users can query the geometric mean price of a pool using the `getGeomeanPrice` function, which aggregates the stored price observations and computes their geometric mean using the GeomeanLibrary
 
-2. Clone this repo & install dependencies
+Data management: The hook maintains a sliding window of up to 100 observations per pool, ensuring that the data remains relevant and storage costs are managed
 
-```bash
-git clone https://github.com/balancer/scaffold-balancer-v3.git
-cd scaffold-balancer-v3
-yarn install
-```
+### Features
 
-3. Set a `SEPOLIA_RPC_URL` in the `packages/foundry/.env` file
+- Secure pool registration: Ensures that only pools created by the authorized factory can register and use the hook, preventing unauthorized access
 
-```
-SEPOLIA_RPC_URL=...
-```
+- Price tracking: Continuously records price observations after each swap, maintaining a history of up to 100 data points per pool
 
-4. Start a local anvil fork of the Sepolia testnet
+- Geometric mean calculation: Provides a reliable geometric mean price, mitigating the impact of outliers and reducing the risk of price manipulation
 
-```bash
-yarn fork
-```
+- Event emissions: Emits events for key actions such as pool registration, observation recording and factory updates, facilitating easy monitoring and integration
 
-5. Deploy the mock tokens, pool factories, pool hooks, and custom pools contracts
-   > By default, the anvil account #0 will be the deployer and recieve the mock tokens and BPT from pool initialization
+- Robust Error Handling: Implements comprehensive error checks to ensure data integrity and prevent invalid operations
 
-```bash
-yarn deploy
-```
+### Future Scope
 
-6. Start the nextjs frontend
+The GeomeanOracleHook is designed with extensibility in mind. Future enhancements could include:
 
-```bash
-yarn start
-```
+- **Dynamic observation window**: Allowing dynamic adjustment of the number of observations stored per pool based on pool activity or governance decisions
 
-7. Explore the frontend
+- **Advanced Geometric mean algorithms**: Implementing more sophisticated algorithms for geometric mean calculation that can handle larger datasets or provide higher precision
 
-- Navigate to http://localhost:3000 to see the home page
-- Visit the [Pools Page](http://localhost:3000/pools) to search by address or select using the pool buttons
-- Vist the [Debug Page](http://localhost:3000/debug) to see the mock tokens, factory, and hooks contracts
+- **Integration with external oracles**: Combining on-chain observations with data from external oracles to enhance price accuracy and reliability
 
-8. Run the Foundry tests
+- **Governance controls**: Introducing governance mechanisms to manage the allowed factory address, observation parameters and other critical settings
 
-```
-yarn test
-```
-
-### 3. Scaffold ETH 2 Tips 🏗️
-
-SE-2 offers a variety of configuration options for connecting an account, choosing networks, and deploying contracts
-
-<details><summary><strong>🔥 Burner Wallet</strong></summary>
-
-If you do not have an active wallet extension connected to your web browser, then scaffold eth will automatically connect to a "burner wallet" that is randomly generated on the frontend and saved to the browser's local storage. When using the burner wallet, transactions will be instantly signed, which is convenient for quick iterative development.
-
-To force the use of burner wallet, disable your browsers wallet extensions and refresh the page. Note that the burner wallet comes with 0 ETH to pay for gas so you will need to click the faucet button in top right corner. Also the mock tokens for the pool are minted to your deployer account set in `.env` so you will want to navigate to the "Debug Contracts" page to mint your burner wallet some mock tokens to use with the pool.
-
-![Burner Wallet](https://github.com/Dev-Rel-as-a-Service/scaffold-balancer-v3/assets/73561520/0a1f3456-f22a-46b5-9e05-0ef5cd17cce7)
-
-![Debug Tab Mint](https://github.com/Dev-Rel-as-a-Service/scaffold-balancer-v3/assets/73561520/fbb53772-8f6d-454d-a153-0e7a2925ef9f)
-
-</details>
-
-<details><summary><strong>👛 Browser Extension Wallet</strong></summary>
-    
-- To use your preferred browser extension wallet, ensure that the account you are using matches the PK you previously provided in the `foundry/.env` file
-- You may need to add a local development network with rpc url `http://127.0.0.1:8545/` and chain id `31337`. Also, you may need to reset the nonce data for your wallet exension if it gets out of sync.
-
-</details>
-
-<details><summary><strong>🐛 Debug Contracts Page </strong></summary>
-
-The [Debug Contracts Page](http://localhost:3000/debug) can be useful for viewing and interacting with all of the externally avaiable read and write functions of a contract. The page will automatically hot reload with contracts that are deployed via the `01_DeployConstantSumFactory.s.sol` script. We use this handy setup to mint `mockERC20` tokens to any connected wallet
-
-</details>
-
-<details><summary><strong>🌐 Changing The Frontend Network Connection</strong></summary>
-
-- The network the frontend points at is set via `targetNetworks` in the `scaffold.config.ts` file using `chains` from viem.
-- By default, the frontend runs on a local node at `http://127.0.0.1:8545`
-
-```typescript
-const scaffoldConfig = {
-  targetNetworks: [chains.foundry],
-```
-
-</details>
-
-<details><summary><strong>🍴 Changing The Forked Network</strong></summary>
-
-- By default, the `yarn fork` command points at sepolia, but any of the network aliases from the `[rpc_endpoints]` of `foundry.toml` can be used to modify the `"fork"` alias in the `packages/foundry/package.json` file
-
-```json
-	"fork": "anvil --fork-url ${0:-sepolia} --chain-id 31337 --config-out localhost.json",
-```
-
-- To point the frontend at a different forked network, change the `targetFork` in `scaffold.config.ts`
-
-```typescript
-const scaffoldConfig = {
-  // The networks the frontend can connect to
-  targetNetworks: [chains.foundry],
-
-  // If using chains.foundry as your targetNetwork, you must specify a network to fork
-  targetFork: chains.sepolia,
-```
-
-</details>
-
-## 👩‍🏫 Learn Core Concepts
-
-- [Contract Architecture](https://docs-v3.balancer.fi/concepts/core-concepts/architecture.html)
-- [Balancer Pool Tokens](https://docs-v3.balancer.fi/concepts/core-concepts/balancer-pool-tokens.html)
-- [Balancer Pool Types](https://docs-v3.balancer.fi/concepts/explore-available-balancer-pools/)
-- [Building Custom AMMs](https://docs-v3.balancer.fi/build-a-custom-amm/)
-- [Exploring Hooks and Custom Routers](https://pitchandrolls.com/2024/08/30/unlocking-the-power-of-balancer-v3-exploring-hooks-and-custom-routers/)
-- [Hook Development Tips](https://medium.com/@johngrant/unlocking-the-power-of-balancer-v3-hook-development-made-simple-831391a68296)
-
-![v3-components](https://github.com/user-attachments/assets/ccda9323-790f-4276-b092-c867fd80bf9e)
-
-## 🕵️ Explore the Examples
-
-Each of the following examples have turn key deploy scripts that can be found in the [foundry/script/](https://github.com/balancer/scaffold-balancer-v3/tree/main/packages/foundry/script) directory
-
-### 1. Constant Sum Pool with Dynamic Swap Fee Hook
-
-The swap fee percentage is altered by the hook contract before the pool calculates the amount for the swap
-
-![dynamic-fee-hook](https://github.com/user-attachments/assets/5ba69ea3-6894-4eeb-befa-ed87cfeb6b13)
-
-### 2. Constant Product Pool with Lottery Hook
-
-An after swap hook makes a request to an oracle contract for a random number
-
-![after-swap-hook](https://github.com/user-attachments/assets/594ce1ac-2edc-4d16-9631-14feb2d085f8)
-
-### 3. Weighted Pool with Exit Fee Hook
-
-An after remove liquidity hook adjusts the amounts before the vault transfers tokens to the user
-
-![after-remove-liquidity-hook](https://github.com/user-attachments/assets/2e8f4a5c-f168-4021-b316-28a79472c8d1)
-
-## 🌊 Create a Custom Pool
-
-[![custom-amm-video](https://github.com/user-attachments/assets/e6069a51-f1b5-4f98-a2a9-3a2098696f96)](https://www.youtube.com/watch?v=kXynS3jAu0M)
-
-### 1. Review the Docs 📖
-
-- [Create a custom AMM with a novel invariant](https://docs-v3.balancer.fi/build-a-custom-amm/build-an-amm/create-custom-amm-with-novel-invariant.html)
-
-### 2. Recall the Key Requirements 🔑
-
-- Must inherit from `IBasePool` and `BalancerPoolToken`
-- Must implement `onSwap`, `computeInvariant`, and `computeBalance`
-- Must implement `getMaximumSwapFeePercentage` and `getMinimumSwapFeePercentage`
-
-### 3. Write a Custom Pool Contract 📝
-
-- To get started, edit the`ConstantSumPool.sol` contract directly or make a copy
-
-## 🏭 Create a Pool Factory
-
-After designing a pool contract, the next step is to prepare a factory contract because Balancer's off-chain infrastructure uses the factory address as a means to identify the type of pool, which is important for integration into the UI, SDK, and external aggregators
-
-### 1. Review the Docs 📖
-
-- [Deploy a Custom AMM Using a Factory](https://docs-v3.balancer.fi/build-a-custom-amm/build-an-amm/deploy-custom-amm-using-factory.html)
-
-### 2. Recall the Key Requirements 🔑
-
-- A pool factory contract must inherit from [BasePoolFactory](https://github.com/balancer/balancer-v3-monorepo/blob/main/pkg/vault/contracts/factories/BasePoolFactory.sol)
-- Use the internal `_create` function to deploy a new pool
-- Use the internal `_registerPoolWithVault` fuction to register a pool immediately after creation
-
-### 3. Write a Factory Contract 📝
-
-- To get started, edit the`ConstantSumFactory.sol` contract directly or make a copy
-
-## 🪝 Create a Pool Hook
-
-[![hook-video](https://github.com/user-attachments/assets/96e12c29-53c2-4a52-9437-e477f6d992d1)](https://www.youtube.com/watch?v=kaz6duliRPA)
-
-### 1. Review the Docs 📖
-
-- [Extend an Existing Pool Type Using Hooks](https://docs-v3.balancer.fi/build-a-custom-amm/build-an-amm/extend-existing-pool-type-using-hooks.html)
-
-### 2. Recall the Key Requirements 🔑
-
-- A hooks contract must inherit from [BasePoolHooks.sol](https://github.com/balancer/balancer-v3-monorepo/blob/main/pkg/vault/contracts/BaseHooks.sol)
-- A hooks contract should also inherit from [VaultGuard.sol](https://github.com/balancer/balancer-v3-monorepo/blob/main/pkg/vault/contracts/VaultGuard.sol)
-- Must implement `onRegister` to determine if a pool is allowed to use the hook contract
-- Must implement `getHookFlags` to define which hooks are supported
-- The `onlyVault` modifier should be applied to all hooks functions (i.e. `onRegister`, `onBeforeSwap`, `onAfterSwap` ect.)
-
-### 3. Write a Hook Contract 📝
-
-- To get started, edit the `VeBALFeeDiscountHook.sol` contract directly or make a copy
-
-## 🚢 Deploy the Contracts
-
-The deploy scripts are located in the [foundry/script/](https://github.com/balancer/scaffold-balancer-v3/tree/main/packages/foundry/script) directory. To better understand the lifecycle of deploying a pool that uses a hooks contract, see the diagram below
-
-![pool-deploy-scripts](https://github.com/user-attachments/assets/bb906080-8f42-46c0-af90-ba01ba1754fc)
-
-### 1. Modifying the Deploy Scripts 🛠️
-
-For all the scaffold integrations to work properly, each deploy script must be imported into `Deploy.s.sol` and inherited by the `DeployScript` contract in `Deploy.s.sol`
-
-### 2. Broadcast the Transactions 📡
-
-#### Deploy to local fork
-
-1. Run the following command
-
-```bash
-yarn deploy
-```
-
-#### Deploy to a live network
-
-1. Add a `DEPLOYER_PRIVATE_KEY` to the `packages/foundry/.env` file
-
-```
-DEPLOYER_PRIVATE_KEY=0x...
-SEPOLIA_RPC_URL=...
-```
-
-> The `DEPLOYER_PRIVATE_KEY` must start with `0x` and must hold enough Sepolia ETH to deploy the contracts. This account will receive the BPT from pool initialization
-
-2. Run the following command
-
-```
-yarn deploy --network sepolia
-```
-
-## 🧪 Test the Contracts
-
-The [balancer-v3-monorepo](https://github.com/balancer/balancer-v3-monorepo) provides testing utility contracts like [BasePoolTest](https://github.com/balancer/balancer-v3-monorepo/blob/main/pkg/vault/test/foundry/utils/BasePoolTest.sol) and [BaseVaultTest](https://github.com/balancer/balancer-v3-monorepo/blob/main/pkg/vault/test/foundry/utils/BaseVaultTest.sol). Therefore, the best way to begin writing tests for custom factories, pools, and hooks contracts is to leverage the examples established by the source code.
-
-### 1. Testing Factories 👨‍🔬
-
-The `ConstantSumFactoryTest` roughly mirrors the [WeightedPool8020FactoryTest
-](https://github.com/balancer/balancer-v3-monorepo/blob/main/pkg/pool-weighted/test/foundry/WeightedPool8020Factory.t.sol)
-
-```
-yarn test --match-contract ConstantSumFactoryTest
-```
-
-### 2. Testing Pools 🏊
-
-The `ConstantSumPoolTest` roughly mirrors the [WeightedPoolTest](https://github.com/balancer/balancer-v3-monorepo/blob/main/pkg/pool-weighted/test/foundry/WeightedPool.t.sol)
-
-```
-yarn test --match-contract ConstantSumPoolTest
-```
-
-### 3. Testing Hooks 🎣
-
-The `VeBALFeeDiscountHookExampleTest` mirrors the [VeBALFeeDiscountHookExampleTest](https://github.com/balancer/balancer-v3-monorepo/blob/main/pkg/pool-hooks/test/foundry/VeBALFeeDiscountHookExample.t.sol)
-
-```
-yarn test --match-contract VeBALFeeDiscountHookExampleTest
-```
+- **Performance optimizations**: Optimizing storage and computation to reduce gas costs and improve efficiency, especially for pools with high swap frequencies
